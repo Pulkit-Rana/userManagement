@@ -1,13 +1,18 @@
 package com.veersa.usermanagement.repository;
 
-import com.veersa.usermanagement.entity.User;
+import com.veersa.usermanagement.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, UUID> {
 
-    @Query("SELECT u FROM User u WHERE u.isActive = true")
+    @Query("SELECT u FROM User u WHERE u.isDeleted = false")
     List<User> findAllActiveUsers();
+    boolean existsByUsername(String username);
+
+    Optional<User> findByUsername(String username);
 }

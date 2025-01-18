@@ -1,4 +1,4 @@
-package com.veersa.usermanagement.entity;
+package com.veersa.usermanagement.domain;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -10,15 +10,10 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "reports")
-@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Report {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Report extends BaseEntity {
 
     @Column(nullable = false)
     private String status; // e.g., SUCCESS, FAILED

@@ -1,4 +1,4 @@
-package com.veersa.usermanagement.entity;
+package com.veersa.usermanagement.domain;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -11,15 +11,10 @@ import java.util.Set;
 
 @Entity
 @Table(name = "pipelines")
-@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Pipeline {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Pipeline extends BaseEntity {
 
     @Column(nullable = false)
     private String name;
@@ -35,5 +30,5 @@ public class Pipeline {
     private User client;
 
     @OneToMany(mappedBy = "pipeline", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<Report> reports = new HashSet<>();
+    @Builder.Default    private Set<Report> reports = new HashSet<>();
 }
