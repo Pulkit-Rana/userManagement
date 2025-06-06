@@ -12,7 +12,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -30,8 +29,8 @@ public class UserInitializer implements CommandLineRunner {
     @Transactional
     public void run(String... args) {
         // Retrieve both roles
-        Optional<UserRole> adminRole = roleRepository.findByName("ROLE_ADMIN");
-        Optional<UserRole> managerRole = roleRepository.findByName("ROLE_MANAGER");
+        Optional<UserRole> adminRole = roleRepository.findByName("ADMIN");
+        Optional<UserRole> managerRole = roleRepository.findByName("MANAGER");
 
         if (adminRole.isEmpty() || managerRole.isEmpty()) {
             log.error("Required roles not found. Make sure roles are initialized first.");
@@ -50,10 +49,7 @@ public class UserInitializer implements CommandLineRunner {
                     .build();
             userRepository.save(adminUser);
             log.info("Admin user created successfully.");
-        } else {
-            log.info("Admin user already exists.");
         }
-
         // Create Manager User
         String managerUsername = "manager@example.com";
         if (!userRepository.existsByUsername(managerUsername)) {
@@ -67,7 +63,7 @@ public class UserInitializer implements CommandLineRunner {
             userRepository.save(managerUser);
             log.info("Manager user created successfully.");
         } else {
-            log.info("Manager user already exists.");
+            log.info("Users already exists");
         }
     }
 }

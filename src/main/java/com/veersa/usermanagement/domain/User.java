@@ -5,8 +5,6 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
-import org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchConnectionDetails;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -14,7 +12,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.io.Serial;
 import java.io.Serializable;
 import java.security.Principal;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Entity
@@ -54,17 +54,23 @@ public class User extends BaseEntity implements UserDetails, Principal, Serializ
     private Profile profile;
 
     @Builder.Default
-    @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<Pipeline> pipelines = new HashSet<>();
+    @Column(nullable = false)
+    private boolean isLocked = false;
 
     @Builder.Default
     @Column(nullable = false)
-    private boolean isLocked = false;
-    // Default to unlocked
+    private boolean isVerified = false;
 
     @Builder.Default
     @Column(nullable = false)
     private boolean enabled = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "provider")
+    private AuthProvider provider = AuthProvider.LOCAL;
+
+    @Column(name = "provider_id")
+    private String providerId;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -94,7 +100,7 @@ public class User extends BaseEntity implements UserDetails, Principal, Serializ
     }
 
     // Add role check methods HERE
-    public boolean isAdmin() {
+/*    public boolean isAdmin() {
         return getRoles().stream()
                 .anyMatch(role -> role.getName().equals("ROLE_ADMIN"));
     }
@@ -102,5 +108,5 @@ public class User extends BaseEntity implements UserDetails, Principal, Serializ
     public boolean isModerator() {
         return getRoles().stream()
                 .anyMatch(role -> role.getName().equals("ROLE_MODERATOR"));
-    }
+    }*/
 }

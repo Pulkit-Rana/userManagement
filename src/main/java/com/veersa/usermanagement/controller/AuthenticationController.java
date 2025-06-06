@@ -8,8 +8,8 @@ import com.veersa.usermanagement.modal.LoginResponseDTO;
 import com.veersa.usermanagement.modal.RefreshTokenRequestDTO;
 import com.veersa.usermanagement.modal.RegistrationDTO;
 import com.veersa.usermanagement.security.JwtServiceConfiguration;
-import com.veersa.usermanagement.service.RefreshTokenService;
 import com.veersa.usermanagement.service.AuthService;
+import com.veersa.usermanagement.service.RefreshTokenService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +18,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-import java.util.List;
 import java.util.Map;
 
 @RestController

@@ -52,13 +52,13 @@ public class UserController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasRole('ADMIN','MODERATOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<User> toggleUserStatus(
-            @PathVariable UUID userId,
+            @PathVariable UUID id,
             @RequestParam boolean enable,
             @AuthenticationPrincipal User requester
     ) {
-        return ResponseEntity.ok(userService.toggleUserStatus(userId, enable, requester));
+        return ResponseEntity.ok(userService.toggleUserStatus(id, enable, requester));
     }
 
     @DeleteMapping("/delete/")

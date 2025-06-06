@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class TokenBlacklistServiceConfiguration {
 
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisTemplate<String, String> redisTemplate;
     private final JwtServiceConfiguration jwtService;
 
     public void addToBlacklist(String token) {
