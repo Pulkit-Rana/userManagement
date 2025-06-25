@@ -35,3 +35,9 @@ out/
 
 ### VS Code ###
 .vscode/
+# ignore dev properties with secrets
+src/main/resources/application-dev.properties
+# ignore dev properties with secrets
+src/main/resources/application.properties
+
+
