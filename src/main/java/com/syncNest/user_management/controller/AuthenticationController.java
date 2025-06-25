@@ -3,7 +3,6 @@ package com.syncNest.user_management.controller;
 import com.syncNest.user_management.domain.User;
 import com.syncNest.user_management.modal.*;
 import com.syncNest.user_management.security.JwtServiceConfiguration;
-import com.syncNest.user_management.security.TokenBlacklistServiceConfiguration;
 import com.syncNest.user_management.service.AuthService;
 import com.syncNest.user_management.service.OtpService;
 import com.syncNest.user_management.service.RefreshTokenService;
@@ -31,7 +30,6 @@ public class AuthenticationController {
     private final OtpService otpService;
     private final RefreshTokenService refreshTokenService;
     private final JwtServiceConfiguration jwtService;
-    private final TokenBlacklistServiceConfiguration blacklistService;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO loginRequest) {
@@ -112,13 +110,13 @@ public class AuthenticationController {
                             .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
                             .body(responseBody);
                 })
-                .orElseThrow(() -> new RuntimeException("Refresh Token is not in DB..!!"));
+                .orElseThrow(() -> new RuntimeException("Refresh Token is not in DB..!!!"));
     }
 
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout(
-            @CookieValue(name = "refreshToken", required = false) String refreshToken,
-            @RequestHeader(name = "Authorization", required = false) String accessToken,
+            @CookieValue(name = "refreshToken", required = false)
+            @RequestHeader(name = "Authorization", required = false)
             HttpServletRequest request,
             HttpServletResponse response) {
         // Use existing logout service logic
