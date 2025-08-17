@@ -48,7 +48,7 @@ public class UserInitializer implements CommandLineRunner {
         if (!userRepository.existsByUsername(adminUsername)) {
             User adminUser = User.builder()
                     .username(adminUsername)
-                    .password(adminPlainPassword)
+                    .password(ensureEncoded(adminPlainPassword)) // ✅ encode here
                     .roles(Set.of(adminRole.get()))
                     .enabled(true)
                     .isLocked(false)
@@ -63,7 +63,7 @@ public class UserInitializer implements CommandLineRunner {
         if (!userRepository.existsByUsername(managerUsername)) {
             User managerUser = User.builder()
                     .username(managerUsername)
-                    .password(managerPlainPassword)
+                    .password(ensureEncoded(managerPlainPassword)) // ✅ encode here
                     .roles(Set.of(managerRole.get()))
                     .enabled(true)
                     .isLocked(false)
@@ -75,5 +75,21 @@ public class UserInitializer implements CommandLineRunner {
         } else {
             log.info("Users already exist");
         }
+    }
+
+    /**
+     * Double-encode se bachne ke liye: agar already bcrypt hash hai to waise hi return kar do
+     */
+    private String ensureEncoded(String rawOrEncoded) {
+        if (rawOrEncoded == null) throw new IllegalArgumentException("Password cannot be null");
+        if (isBcrypt(rawOrEncoded)) return rawOrEncoded;
+        return passwordEncoder.encode(rawOrEncoded);
+    }
+
+    /**
+     * BCrypt hashes usually start with $2a$, $2b$, or $2y$
+     */
+    private boolean isBcrypt(String value) {
+        return value.startsWith("$2a$") || value.startsWith("$2b$") || value.startsWith("$2y$");
     }
 }

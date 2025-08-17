@@ -135,7 +135,6 @@ public class UserManagementService {
     public UserDTO getCurrentUserProfile(User currentUser) {
         return UserDTO.builder()
                 .id(currentUser.getId())
-                .username(currentUser.getUsername())
                 .roles(currentUser.getRoles().stream()
                         .map(UserRole::getName)
                         .collect(Collectors.toSet()))
@@ -143,7 +142,6 @@ public class UserManagementService {
                         .firstName(currentUser.getProfile().getFirstName())
                         .lastName(currentUser.getProfile().getLastName())
                         .profilePictureUrl(currentUser.getProfile().getProfilePictureUrl())
-                        .lastLoginDate(currentUser.getProfile().getLastLoginDate())
                         .build())
                 .build();
     }

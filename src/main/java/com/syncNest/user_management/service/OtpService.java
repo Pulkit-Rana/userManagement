@@ -1,3 +1,4 @@
+// OtpService.java
 package com.syncNest.user_management.service;
 
 import lombok.RequiredArgsConstructor;
@@ -13,32 +14,34 @@ import java.util.concurrent.ThreadLocalRandom;
 public class OtpService {
 
     private static final String OTP_PREFIX = "OTP:";
-    private static final Duration OTP_EXPIRY = Duration.ofSeconds(60);
+    private static final Duration OTP_EXPIRY = Duration.ofMinutes(5);
     private final RedisTemplate<String, String> redisTemplate;
     private final EmailService emailService;
 
     public void generateAndSendOtp(String email) {
         String otp = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 999999));
         String hashedOtp = Sha512DigestUtils.shaHex(otp);
-
         redisTemplate.opsForValue().set(OTP_PREFIX + email, hashedOtp, OTP_EXPIRY);
-        emailService.sendOtp(email, otp); // implement using JavaMailSender
+        emailService.sendOtp(email, otp);
     }
 
-    public boolean verifyOtp(String email, String enteredOtp) {
+    public void verifyAndConsumeOtpOrThrow(String email, String enteredOtp) {
         String redisKey = OTP_PREFIX + email;
-        Object value = redisTemplate.opsForValue().get(redisKey);
+        Object storedHash = redisTemplate.opsForValue().get(redisKey);
 
-        if (value == null) return false;
+        if (storedHash == null) {
+            throw new IllegalArgumentException("OTP expired or invalid.");
+        }
 
         String hashedEnteredOtp = Sha512DigestUtils.shaHex(enteredOtp);
-        boolean isValid = hashedEnteredOtp.equals(value.toString());
+        if (!hashedEnteredOtp.equals(storedHash.toString())) {
+            throw new IllegalArgumentException("Incorrect OTP.");
+        }
 
-        if (isValid) redisTemplate.delete(redisKey); // one-time use
-        return isValid;
+        redisTemplate.delete(redisKey); // consume OTP after verification
     }
 
     public boolean isOtpVerified(String email) {
-        return !redisTemplate.hasKey(OTP_PREFIX + email); // If deleted, assume verified
+        return !redisTemplate.hasKey(OTP_PREFIX + email);
     }
 }
