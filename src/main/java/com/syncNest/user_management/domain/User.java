@@ -72,6 +72,9 @@ public class User extends BaseEntity implements UserDetails, Principal, Serializ
     @Column(name = "provider_id")
     private String providerId;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<UserOAuth> oauthAccounts;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return this.roles.stream()

@@ -9,8 +9,8 @@ import lombok.Builder;
 import lombok.Data;
 
 @Data
-@PasswordMatch(passwordField = "password", passwordConfirmationField = "passwordConfirmation")
 @Builder
+@PasswordMatch(passwordField = "password", passwordConfirmationField = "passwordConfirmation")
 public class RegistrationRequestDTO {
 
     @NotEmpty(message = "The username cannot be empty")
@@ -18,8 +18,19 @@ public class RegistrationRequestDTO {
     private String username;
 
     @NotEmpty(message = "The password cannot be empty")
-    @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).*$", message = "must contain at least one uppercase letter, one lowercase letter, and one digit.")
+    @Pattern(
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).*$",
+            message = "must contain at least one uppercase letter, one lowercase letter, and one digit."
+    )
     @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
+
+    @NotEmpty(message = "Password confirmation is required")
     private String passwordConfirmation;
+
+    @NotEmpty(message = "First name is required")
+    private String firstName;
+
+    @NotEmpty(message = "Last name is required")
+    private String lastName;
 }

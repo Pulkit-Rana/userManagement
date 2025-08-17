@@ -1,7 +1,7 @@
 package com.syncNest.user_management.service;
 
+import com.syncNest.user_management.domain.AuthProvider;
 import com.syncNest.user_management.domain.Profile;
-import com.syncNest.user_management.domain.RefreshToken;
 import com.syncNest.user_management.domain.User;
 import com.syncNest.user_management.domain.UserRole;
 import com.syncNest.user_management.modal.*;
@@ -20,105 +20,130 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
+import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Service
 @Slf4j
+@Service
 @RequiredArgsConstructor
 public class AuthService {
 
     private final RoleRepository roleRepository;
-    private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtServiceConfiguration jwtService;
     private final RefreshTokenService refreshTokenService;
     private final TokenBlacklistServiceConfiguration blacklistService;
+    private final OtpService otpService;
 
-    public User register(RegistrationRequestDTO registrationDTO) {
-        var userRole = roleRepository.findByName("USER")
-                .orElseThrow(() -> new IllegalStateException("No Such Role as USER. "));
-        var user = User.builder()
-                .username(registrationDTO.getUsername())
-                .password(passwordEncoder.encode(registrationDTO.getPassword()))
+    // ===================== REGISTER ======================
+
+    public User register(RegistrationRequestDTO dto) {
+        UserRole userRole = roleRepository.findByName("USER")
+                .orElseThrow(() -> new IllegalStateException("No such role: USER"));
+
+        User user = User.builder()
+                .username(dto.getUsername())
+                .password(passwordEncoder.encode(dto.getPassword()))
                 .enabled(false)
                 .isVerified(false)
-                // Explicitly set to unlocked
+                .provider(AuthProvider.LOCAL)
                 .roles(Set.of(userRole))
                 .build();
-        //sendVerificationEmail(user);
-        // Save the user to the database
-        return userRepository.save(user);
+
+        Profile profile = Profile.builder()
+                .firstName(dto.getFirstName())
+                .lastName(dto.getLastName())
+                .lastLoginDate(LocalDateTime.now())
+                .user(user) // ✅ critical: connect Profile -> User
+                .build();
+
+        user.setProfile(profile); // ✅ critical: connect User -> Profile
+
+        return userRepository.save(user); // ✅ Cascade saves both
     }
+
+    // ===================== LOGIN ======================
 
     public LoginResponseDTO authenticate(LoginRequestDTO request) {
         var auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
-                        request.getPassword()
+                        request.getUsername(), request.getPassword()
                 )
         );
+
         User user = (User) auth.getPrincipal();
-        var refreshToken = refreshTokenService.createRefreshToken(request.getUsername());
-        var jwtToken = jwtService.generateToken(request.getUsername());
+        updateLastLogin(user);
+        return generateLoginResponse(user);
+    }
 
-        UserDTO userDTO = mapToUserDTO(user);
+    public LoginResponseDTO verifyOtpAndLogin(OtpVerifyDTO dto) {
+        otpService.verifyAndConsumeOtpOrThrow(dto.getEmail(), dto.getOtp());
+        User user = activateUser(dto.getEmail());
+        updateLastLogin(user);
+        return generateLoginResponse(user);
+    }
 
-        return LoginResponseDTO.builder()
-                .accessToken(jwtToken)
-                .refreshToken(refreshToken.getToken())
-                .user(userDTO) // ✅ Include user info in response
-                .build();
+    private void updateLastLogin(User user) {
+        if (user.getProfile() != null) {
+            user.getProfile().setLastLoginDate(LocalDateTime.now());
+        }
+        userRepository.save(user);
     }
 
     public User activateUser(String email) {
-        User user = userRepository.findByUsername(email).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findByUsername(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
         user.setEnabled(true);
         user.setVerified(true);
         return userRepository.save(user);
     }
 
+    // ===================== LOGOUT ======================
+
     public void logout(HttpServletRequest request, HttpServletResponse response) {
-        // 1. Extract access token
-        String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-        String accessToken = null;
-        String username = null;
-
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            accessToken = authHeader.substring(7);
-            username = jwtService.extractUsername(accessToken);
-            blacklistService.addToBlacklist(accessToken);
-            log.info("Blacklisted access token: {}", accessToken);
+        String token = extractAccessToken(request);
+        if (token != null && !jwtService.isTokenExpired(token)) {
+            blacklistService.addToBlacklist(token);
+            log.info("Access token blacklisted.");
         }
 
-        // 2. Delete refresh tokens by username (best effort cleanup)
-        if (username == null) {
-            Cookie[] cookies = request.getCookies();
-            if (cookies != null) {
-                for (Cookie cookie : cookies) {
-                    if ("refreshToken".equals(cookie.getName())) {
-                        String refreshToken = cookie.getValue();
-                        Optional<RefreshToken> token = refreshTokenService.findByToken(refreshToken);
-                        if (token.isPresent()) {
-                            username = token.get().getUser().getUsername();
-                            refreshTokenService.deleteByToken(refreshToken);
-                            log.info("Deleted refresh token from cookie.");
-                        }
-                    }
-                }
-            }
-        }
-
+        String username = extractUsernameFromRefreshToken(request);
         if (username != null) {
             userRepository.findByUsername(username).ifPresent(user -> {
                 refreshTokenService.deleteByUserId(user.getId());
-                log.info("Deleted refresh tokens for user {}", user.getUsername());
+                log.info("Deleted refresh tokens for user {}", username);
             });
         }
 
-        // Expire the cookie
+        expireRefreshCookie(response);
+    }
+
+    // ===================== PRIVATE ======================
+
+    private String extractAccessToken(HttpServletRequest request) {
+        String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+        return (header != null && header.startsWith("Bearer ")) ? header.substring(7) : null;
+    }
+
+    private String extractUsernameFromRefreshToken(HttpServletRequest request) {
+        if (request.getCookies() == null) return null;
+        for (Cookie cookie : request.getCookies()) {
+            if ("refreshToken".equals(cookie.getName())) {
+                String token = cookie.getValue();
+                return refreshTokenService.findByToken(token)
+                        .map(t -> {
+                            refreshTokenService.deleteByToken(token);
+                            return t.getUser().getUsername();
+                        }).orElse(null);
+            }
+        }
+        return null;
+    }
+
+    private void expireRefreshCookie(HttpServletResponse response) {
         Cookie expiredCookie = new Cookie("refreshToken", null);
         expiredCookie.setPath("/");
         expiredCookie.setHttpOnly(true);
@@ -128,29 +153,34 @@ public class AuthService {
         response.addCookie(expiredCookie);
     }
 
+    private LoginResponseDTO generateLoginResponse(User user) {
+        String accessToken = jwtService.generateToken(user.getUsername());
+        String refreshToken = refreshTokenService.createRefreshToken(user.getUsername()).getToken();
 
-    private UserDTO mapToUserDTO(User user) {
-        return getUserDTO(user);
-    }
-
-    private UserDTO getUserDTO(User user) {
-        Profile profile = user.getProfile();
-        UserProfileDTO profileDTO = null;
-        if (profile != null) {
-            profileDTO = UserProfileDTO.builder()
-                    .firstName(profile.getFirstName())
-                    .lastName(profile.getLastName())
-                    .profilePictureUrl(profile.getProfilePictureUrl())
-                    .build();
-        }
-        return UserDTO.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .roles(user.getRoles().stream()
-                        .map(UserRole::getName)
-                        .collect(Collectors.toSet()))
-                .profile(profileDTO)
+        return LoginResponseDTO.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .tokenType("Bearer")
+                .expiresIn(jwtService.getTokenValiditySeconds())
+                .user(mapToUserDTO(user))
                 .build();
     }
 
+    private UserDTO mapToUserDTO(User user) {
+        Profile profile = user.getProfile();
+        UserProfileDTO profileDTO = (profile != null)
+                ? UserProfileDTO.builder()
+                .firstName(profile.getFirstName())
+                .lastName(profile.getLastName())
+                .profilePictureUrl(profile.getProfilePictureUrl())
+                .build()
+                : new UserProfileDTO();
+
+        return UserDTO.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .roles(user.getRoles().stream().map(UserRole::getName).collect(Collectors.toSet()))
+                .profile(profileDTO)
+                .build();
+    }
 }

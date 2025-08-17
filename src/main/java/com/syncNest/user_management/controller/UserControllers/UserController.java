@@ -1,4 +1,4 @@
-package com.syncNest.user_management.controller;
+package com.syncNest.user_management.controller.UserControllers;
 
 import com.syncNest.user_management.domain.User;
 import com.syncNest.user_management.modal.UserCreateDTO;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("users")
+@RequestMapping("user")
 @RequiredArgsConstructor
 @Tag(name = "Users")
 public class UserController {
