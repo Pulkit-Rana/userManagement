@@ -1,3 +1,4 @@
+### Build & Gradle ###
 HELP.md
 .gradle
 build/
@@ -5,7 +6,32 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-### STS ###
+### Logs ###
+*.log
+logs/
+*.out
+
+### OS files ###
+.DS_Store
+Thumbs.db
+
+### Spring Boot Configs (DO NOT COMMIT SECRETS) ###
+src/main/resources/application.properties
+src/main/resources/application-*.properties
+src/main/resources/application.yml
+src/main/resources/application-*.yml
+/application.properties
+/application.yml
+/application-*.properties
+/application-*.yml
+*.local.properties
+*.local.yml
+
+# Example template (keep only example files in git)
+!src/main/resources/application-example.properties
+!src/main/resources/application-example.yml
+
+### STS (Spring Tool Suite) ###
 .apt_generated
 .classpath
 .factorypath
@@ -35,9 +61,18 @@ out/
 
 ### VS Code ###
 .vscode/
-# ignore dev properties with secrets
-src/main/resources/application-dev.properties
-# ignore dev properties with secrets
-src/main/resources/application.properties
-/application.properties
-application-dev.properties
+
+### Java ###
+*.class
+*.war
+*.ear
+*.jar
+hs_err_pid*
+replay_pid*
+
+### Temporary ###
+*.tmp
+*.swp
+*.bak
+*.old
+*.orig
